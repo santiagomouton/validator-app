@@ -1,0 +1,16 @@
+services:
+  server:
+    container_name: validator-api
+    image: ghcr.io/${{ github.repository_owner }}/validator-api
+    restart: unless-stopped
+
+  proxy:
+    container_name: nginx-proxy
+    image: ghcr.io/${{ github.repository_owner }}/nginx-proxy
+    restart: unless-stopped
+    ports:
+      - 80:80
+      - 443:443
+    logging:
+      driver: "json-file"
+
