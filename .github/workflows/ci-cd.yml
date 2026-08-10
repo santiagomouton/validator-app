@@ -7,12 +7,16 @@ on:
     branches: [ "test","main" ]
 
 env:
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/validator-api
+  IMAGE_API: docker.io/santlink/validator-api
+  IMAGE_PROXY: docker.io/santlink/validator-proxy
 
 jobs:
 
   build-and-push:
     runs-on: ubuntu-latest
+    outputs:
+      TAG-API: ${{ steps.meta-validator-api.outputs.tags }}
+      TAG-PROXY: ${{ steps.meta-validator-proxy.outputs.tags }}
     steps:
     - uses: actions/checkout@v4
     - name: Setup Docker
@@ -22,12 +26,12 @@ jobs:
       id: meta-validator-api
       uses: docker/metadata-action@v6
       with:
-        images: santlink/validator-api
+        images: ${{ env.IMAGE_API }}
     - name: Docker meta proxy
       id: meta-validator-proxy
       uses: docker/metadata-action@v6
       with:
-        images: santlink/validator-proxy
+        images: ${{ env.IMAGE_PROXY }}
 
     - name: Login registry
       uses: docker/login-action@v4.6.0
@@ -68,10 +72,10 @@ jobs:
       - name: run app on remote server
         if: github.ref == 'refs/heads/test'
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd /home/user/app && bash app.sh start --testing"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd /home/user/app && export ${{ needs.build-and-push.outputs.TAG-API }} && export ${{ needs.build-and-push.outputs.TAG-PROXY }} && bash app.sh start --testing"
       - name: run app on remote server
         if: github.ref == 'refs/heads/main'
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd /home/user/app && bash app.sh start --production"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd /home/user/app && export ${{ needs.build-and-push.outputs.TAG-API }} && export ${{ needs.build-and-push.outputs.TAG-PROXY }} && bash app.sh start --production"
     
       
