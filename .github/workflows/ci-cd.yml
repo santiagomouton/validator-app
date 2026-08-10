@@ -2,59 +2,80 @@ name: CI-CD
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "test","main" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "test","main" ]
 
 env:
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/validator-api
+  IMAGE_API: docker.io/santlink/validator-api
+  IMAGE_PROXY: docker.io/santlink/validator-proxy
 
 jobs:
 
   build-and-push:
     runs-on: ubuntu-latest
+    outputs:
+      TAG-API: ${{ steps.meta-validator-api.outputs.tags }}
+      TAG-PROXY: ${{ steps.meta-validator-proxy.outputs.tags }}
     steps:
     - uses: actions/checkout@v4
     - name: Setup Docker
-      uses: docker/setup-docker-action@v5.4.0
+      uses: docker/setup-buildx-action@v4.2.0
+
+    - name: Docker meta api
+      id: meta-validator-api
+      uses: docker/metadata-action@v6
       with:
-        github-token: # optional, default is ${{ github.token }}
-    - name: Build proxy-nginx image
-      run: docker build project/backend/ --file project/backend/Dockerfile --tag $IMAGE_NAME:$(date +%s)
-    - name: Build api image
-      run: docker build project/backend/ --file project/backend/Dockerfile --tag $IMAGE_NAME:$(date +%s)
-    - name: Docker Login
+        images: ${{ env.IMAGE_API }}
+    - name: Docker meta proxy
+      id: meta-validator-proxy
+      uses: docker/metadata-action@v6
+      with:
+        images: ${{ env.IMAGE_PROXY }}
+
+    - name: Login registry
       uses: docker/login-action@v4.6.0
       with:
-        registry:
-        username:
-        password: # optional
-        # Specifies whether the given registry is ECR (auto, true or false)
-        ecr: # optional
-        # Scope for the authentication token
-        scope: # optional
-        # Raw authentication to registries, defined as YAML objects
-        registry-auth: # optional
-    - name: push to registry
-      run: docker push 
-    - name: push to registry
-      run: docker push
+        username: ${{ secrets.REGISTRY_USER }}
+        password: ${{ secrets.REGISTRY_TOKEN }}
+    - name: Build and push validator-api image
+      uses: docker/build-push-action@v7.3.0
+      with:
+        context: project/backend
+        file: project/backend/Dockerfile
+        push: true
+        labels: ${{ steps.meta-validator-api.outputs.labels }}
+        tags: ${{ steps.meta-validator-api.outputs.tags }}
+    - name: Build and push proxy-nginx image
+      uses: docker/build-push-action@v7.3.0
+      with:
+        context: project/nginx
+        file: project/nginx/Dockerfile
+        push: true
+        labels: ${{ steps.meta-validator-proxy.outputs.labels }}
+        tags: ${{ steps.meta-validator-proxy.outputs.tags }}
 
   deploy:
     runs-on: ubuntu-22.04
+    needs: build-and-push
     steps:
       - uses: actions/checkout@v4
       - name: Setup ssh
         uses: kielabokkie/ssh-key-and-known-hosts-action@v1
         with:
           ssh-private-key: ${{ secrets.SSH_KEY }}
-          ssh-host: your-server.com
+          ssh-host: ${{ secrets.SSH_HOST }}
           ssh-port: ${{ secrets.SSH_PORT }}
       - name: scp compose file to remote server
         run: | 
-          scp app.sh project/compose.yml project/.env.testing project/.env.testing ${{ secrets.SSH_USER }}@your-server.com:/home/user/app/
+          scp app.sh project/compose.yml project/.env.testing project/.env.testing ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/user/app/
       - name: run app on remote server
+        if: github.ref == 'refs/heads/test'
         run: |
-          ssh ${{ secrets.SSH_USER }}@your-server.com "cd /home/user/app && bash app.sh start --testing"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd /home/user/app && export ${{ needs.build-and-push.outputs.TAG-API }} && export ${{ needs.build-and-push.outputs.TAG-PROXY }} && bash app.sh start --testing"
+      - name: run app on remote server
+        if: github.ref == 'refs/heads/main'
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd /home/user/app && export ${{ needs.build-and-push.outputs.TAG-API }} && export ${{ needs.build-and-push.outputs.TAG-PROXY }} && bash app.sh start --production"
     
       
