@@ -204,6 +204,8 @@ El algoritmo implementado:
 
 - **Despliegue**:
   - usar un orchestrador como Kubernetes o Docker Swarm.
+- **Integracion**:
+  - agregar test y escaneo de vulnerabilidades a las imagenes y al codigo, usando tools como sonarqube o docker lint.
 - **Auth**: 
   - se podria utilizar una herramienta que maneje tokens temporales como Keycloak.
 - **Rollback**:
