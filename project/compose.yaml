@@ -1,12 +1,12 @@
 services:
   server:
     container_name: validator-api
-    image: docker.io/santlink/validator-api:${TAG}
+    image: docker.io/santlink/validator-api:${TAG-API}
     restart: unless-stopped
 
   proxy:
     container_name: nginx-proxy
-    image: docker.io/santlink/validator-proxy:${TAG}
+    image: docker.io/santlink/validator-proxy:${TAG-PROXY}
     restart: unless-stopped
     ports:
       - 80:80
