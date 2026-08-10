@@ -49,7 +49,7 @@ La API sigue una arquitectura por capas para mantener una separación de respons
 
 ### Entorno local de desarrollo
 
-Para desarrollo local se utiliza Docker Compose con configuración para reload. En este modo se ejecuta Uvicorn con `reload` y se monta la carpeta de desarrollo para que los cambios se reflejen en tiempo real sin reiniciar manualmente el contenedor.
+Para desarrollo local se utiliza [compose.yaml](project/compose.dev.yaml) con configuración para reload. En este modo se ejecuta Uvicorn con `reload` y se monta la carpeta de desarrollo para que los cambios se reflejen en tiempo real sin reiniciar manualmente el contenedor.
 
 ```bash
 chmod +x app.sh
@@ -60,7 +60,7 @@ Esto levantará la API en http://localhost:8000
 
 ### Entorno de despliegue / testing / producción
 
-El archivo [compose.yaml](compose.yaml) está pensado para despliegue en ambientes remotos de testing o producción. La aplicación se levanta usando la imagen del registry y se utiliza las variables de entorno .env.\<testing-prodction\> respectivamente, estos comandos estan preparados para utilizarse con **GitHub Actions unicamente**.
+El archivo [compose.yaml](project/compose.yaml) está pensado para despliegue en ambientes remotos de testing o producción. La aplicación se levanta usando la imagen del registry y se utiliza las variables de entorno .env.\<testing-prodction\> respectivamente, estos comandos estan preparados para utilizarse con **GitHub Actions unicamente**.
 
 ```bash
 ./app.sh start --testing
@@ -204,6 +204,8 @@ El algoritmo implementado:
 
 - **Despliegue**:
   - usar un orchestrador como Kubernetes o Docker Swarm.
+- **Integracion**:
+  - agregar test y escaneo de vulnerabilidades a las imagenes y al codigo, usando tools como sonarqube o docker lint.
 - **Auth**: 
   - se podria utilizar una herramienta que maneje tokens temporales como Keycloak.
 - **Rollback**:

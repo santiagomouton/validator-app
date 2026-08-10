@@ -3,8 +3,9 @@ name: CI-CD
 on:
   push:
     branches: [ "test","main" ]
-  pull_request:
-    branches: [ "test","main" ]
+    paths-ignore:
+    - 'README.md'
+    - '.gitignore'
 
 env:
   IMAGE_API: docker.io/santlink/validator-api
